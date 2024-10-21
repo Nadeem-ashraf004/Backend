@@ -1,37 +1,68 @@
-const express=require('express');
-const mongoose=require('mongoose')
-const  bodyParser=require('body-parser')
-const app=express()
-const port=3000;
+import express from "express";
+import dotenv from "dotenv";
+import mongoose from "mongoose";
+import cors from "cors";
+import cookieParser from "cookie-parser";
 
 
-app.use(bodyParser.json());
+import authRoute from "./routes/user.routes.js"
+import productRoute from "./routes/product.routes.js"
 
-mongoose.connect('mongodb://localhost:27017/mydatabase',{
+dotenv.config();
 
-    useerNewUrlParser : true,
-    useUnifiedTopogy:true,
+const app = express()
+ 
+const corsOptions = {
+  credentials: true,
+  origin: "http://localhost:5173",
+};
+app.use(cors(corsOptions));
+app.use(cookieParser());
+app.use(express.json());
+
+// Set endpoint
+
+app.use("/api/user", authRoute);
+app.use("/api/product",productRoute );
+
+
+
+const DatabaseConnection = async () => {
+    try {
+      await mongoose.connect(process.env.MONGO_URI);
+      console.log("Connected to mongoDB.");
+    } catch (error) {
+      console.log("Connection Error", error);
+    }
+  };
+  
+  mongoose.connection.on("disconnected", () => {
+    console.log("MongoDB Disconnected!");
+  });
+  
+
+app.get("/", (req, res)=>{
+res.send("Hello From Backend")
 })
 
-.then(()=>console.log('MongoDB connected'))
-.catch(err=>console.log(err));
+const port = process.env.PORT || 5000;
 
-app.get('/',(req,res)=>{
-    res.send('hello world');
+
+
+app.use((err, req, res, next) => {
+  const errorStatus = err.status || 500;
+  const errorMessage = err.message || "Something went wrong!";
+  return res.status(errorStatus).json({
+    success: false,
+    status: errorStatus,
+    message: errorMessage,
+    stack: err.stack,
+  });
 });
 
-app.post('/items',(req,res)=>{
 
-    const newItem=req.body;
-
-    res.json({message:'item created', item:newitem})
+app.listen(port, () => {
+DatabaseConnection();
+  console.log(`Server Listen on port ${port}`);
+  console.log("Connected to backend.");
 });
-
-app.get('/item',(req,res)=>{
-
-    res.json({message:'list of items'})
-})
-
-app.listen(port,()=>{
-    console.log(`server running on http:localhost:${port}`)
-})
